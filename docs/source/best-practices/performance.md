@@ -5,6 +5,7 @@ description: Reduce requests and speeding up applications
 
 GraphQL offers performance benefits for most applications. By reducing round-trips when fetching data, lower the amount of data we are sending back, and make it easier to batch data lookups. Since GraphQL is often built as a stateless request-response pattern, scaling our app horizontally becomes much easier. In this section, we will dive into some benefits that Apollo Server brings to our app, and some patterns for speeding up our service.
 
+<!-- TODO: this is a feature of GraphQL. Should this go here? -->
 ## Prevent over-fetching
 
 Rest endpoints often return all of the fields for whatever data they are returning. As applications grow, their data needs grow as well, which leads to a lot of unnecessary data being downloaded by our client applications. With GraphQL this isn't a problem because Apollo Server will only return the data that we ask for when making a request! Take for example a screen which shows an avatar of the currently logged in user. In a rest app we may make a request to `/api/v1/currentUser` which would return a response like this:
@@ -27,8 +28,8 @@ Contrast that to the request a client would send to Apollo Server and the respon
 
 ```graphql
 query GetAvatar {
-  currentUser { 
-    avatar 
+  currentUser {
+    avatar
   }
 }
 ```
@@ -45,6 +46,7 @@ query GetAvatar {
 
 No matter how much our data grows, this query will always only return the smallest bit of data that the client application actually needs! This will make our app faster and our end users data plan much happier!
 
+<!-- TODO: this is a feature of GraphQL. Should this go here? -->
 ## Reducing round-trips
 
 Applications typically need to fetch multiple resources to load any given screen for a user. When building an app on top of a REST API, screens need to fetch the first round of data, then using that information, make another request to load related information. A common example of this would be to load a user, then load their friends:

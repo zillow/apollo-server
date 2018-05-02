@@ -25,7 +25,7 @@ All of the approaches require that users be authenticated with the server. If ou
 
 <h2>Schema Authorization</h2>
 
-Schema authorization is useful for GraphQL endpoints that require known users and allow access to all fields inside of a GraphQL endpoint. This approach is useful for internal applications, which are used by a group that is known and generally trusted. Additionally it's common to have separate GraphQL services for different features or products that are entirely available to users, meaning if a user is authenticated, they are authorized to access all the data. Since schema authorization does not need to be aware of the GraphQL layer, our server can add a middleware in front of the GraphQL layer to ensure authorization. 
+Schema authorization is useful for GraphQL endpoints that require known users and allow access to all fields inside of a GraphQL endpoint. This approach is useful for internal applications, which are used by a group that is known and generally trusted. Additionally it's common to have separate GraphQL services for different features or products that are entirely available to users, meaning if a user is authenticated, they are authorized to access all the data. Since schema authorization does not need to be aware of the GraphQL layer, our server can add a middleware in front of the GraphQL layer to ensure authorization.
 
 ```js
 // authenticate for schema usage
@@ -34,7 +34,7 @@ const context = ({ req }) => {
   if (!user) {
     throw new Error("You need to be authenticated to access this schema!");
   }
-  
+
   return { user }
 };
 
@@ -160,7 +160,7 @@ Since GraphQL queries are sent to a server in the same manner as REST requests, 
 
 ## Auth Example
 
-If you are new setting up new infrastructure or would like to understand an example of how to adapt your existing login system, you can follow this example using passport.js. We will use this example of authentication in the subsequent sections. To skip this section, jump down to the
+If you are new setting up new infrastructure or would like to understand an example of how to adapt your existing login system, you can follow this example using passport.js.
 
 ```shell
 npm install --save express passport body-parser express-session node-uuid passport-local apollo-server graphql
