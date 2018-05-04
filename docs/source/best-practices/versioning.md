@@ -17,13 +17,13 @@ Versioning is used to prevent breaking changes from being pushed to clients cons
 
 ## Additive Changes
 
-Since clients only get exactly what they ask for from GraphQL queries, adding new fields, queries, or mutations won't introduce any new breaking changes. You don't need to do anything!
+Since clients only get exactly what they ask for from GraphQL queries, adding new fields, arguments, queries, or mutations won't introduce any new breaking changes. You don't need to do anything!
 
-## Field Rollover
+<h2 id="field-rollover">Field Rollover</h2>
 
 Field rollover is a term given to an API change that's an evolution of a field, such as a rename or a change in arguments. Some of these changes can be really small, so versioning for any such change could create many versions quickly, and make your API hard to manage. We'll go over these two kinds of field rollover separately and show how to make these changes safely.
 
-### Renaming a field
+<h3 id="renaming-or-removing-a-field">Renaming or removing a field</h3>
 
 Suppose we have query called `user` as defined below.
 
@@ -56,6 +56,8 @@ const resolvers = {
 }
 ```
 
+**Deprecating a field**
+
 But that's not all! If we just left both fields active, there's no way that clients would know that they were supposed to use the new query. Luckily, the graphql spec details a schema directive called `@deprecated`.
 
 ```
@@ -76,41 +78,37 @@ Over time, usage will fall for the deprecated field and grow for the new field. 
 
 ### Changing arguments
 
-Sometimes we want to keep a field, but change how clients use it by adjusting its variables and/or return type. For example, if we had a `getUserData` query we used to fetch a single user's data, but wanted to change the arguments to _only_ support a list of `ids` instead of a single `id` and return a list of users.
+**Non-breaking argument changes**
+
+Sometimes we want to keep a field, but change how clients use it by adjusting its variables. For example, if we had a `getUsers` query that we used to fetch user data based off of a list of user ids, but wanted to change the arguments to support a `groupId` to look up users of a group or filter the users requested by the `ids` argument to only return users in the group:
 
 ```graphql
 type Query {
   # what we have
-  getUserInfo(id: ID!): User
+  getUsers(ids: [ID!]!): [User]!
 
   # what we want to end up with
-  getUser(ids: [ID!]!): [User]!
+  getUsers(ids: [ID!], groupId: ID!): [User]!
 }
 ```
 
-Similar to how we incrementally moved a field to a new name in the previous section, we can take this process slowly and prevent any breaking changes.
+Since this is an additive change, and doesn't actually change the default behavior of the `getUsers` query, this isn't even a breaking change.
 
-The first thing we would do is add in the second argument side-by-side with the old one. Since _one_ of the two arguments is required, both have to be optional for now (we will enforce that exactly one of them exists in our resolver). Our return type would be a union of a single user or our list of users.
+**Breaking changes**
 
-```js
-const typeDefs = gql`
-  union UserOrListOfUsers = User | [User]
-  type Query {
-    getUserInfo(id: ID, ids: [ID!]): UserOrListOfUsers
-  }
-`;
+An example of a breaking change on an argument would be renaming (or deleting) an argument.
 
-const resolvers = {
-  Query: {
-    getUserInfo: (root, args, context) => {
-      if((!args.id && !args.ids) || (args.id && args.ids))
-        throw new Error('You must provide EITHER id or a list of ids');
+```graphql
+type query = {
+  # what we have
+  getUsers(ids: [ID!], groupId: ID!): [User]!
 
-      const users = context.User.getByIds(args.id ? [args.id] : args.ids);
-
-      // if they passed 'id' they're expecting a single user, not a list
-      return args.id ? users[0] || null : users;
-    }
-  }
-};
+  # what we want to end up with
+  getUsers(ids: [ID!], groupIds: [ID!]): [User]!
+}
 ```
+
+There's no way to mark an argument as deprecated, but there are a couple options. If we wanted to leave the old `groupId` argument active, we wouldn't need to do anything; adding a new argument isn't a breaking change as long as existing functionality doesn't change.
+
+Instead of supporting it, if we wanted to remove the old argument, the safest option would be to create a new field and deprecate the current `getUsers` field. Using a monitoring tool, like Apollo Engine, you can tell when usage of an old field has dropped to a reasonable level and remove it. The earlier [field rollover](#field-rollover) section gives more info on how to do that.
+
