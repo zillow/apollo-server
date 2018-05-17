@@ -42,18 +42,18 @@ function enrichError(error: GraphQLError, debug: boolean = false) {
   //ensure that extensions is not taken from the originalError
   //graphql-js ensures that the originalError's extensions are hoisted
   //https://github.com/graphql/graphql-js/blob/0bb47b2/src/error/GraphQLError.js#L138
-  delete expanded.extensions.exception.extensions;
-  if (debug && !expanded.extensions.exception.stacktrace) {
-    expanded.extensions.exception.stacktrace =
+  delete expanded.extensions['exception'].extensions;
+  if (debug && !expanded.extensions['exception'].stacktrace) {
+    expanded.extensions['exception'].stacktrace =
       (error.originalError &&
         error.originalError.stack &&
         error.originalError.stack.split('\n')) ||
       (error.stack && error.stack.split('\n'));
   }
 
-  if (Object.keys(expanded.extensions.exception).length === 0) {
+  if (Object.keys(expanded.extensions['exception']).length === 0) {
     //remove from printing an empty object
-    delete expanded.extensions.exception;
+    delete expanded.extensions['exception'];
   }
 
   return expanded;
@@ -63,13 +63,13 @@ export function toApolloError(
   error: Error,
   code: string = 'INTERNAL_SERVER_ERROR',
 ): Error & { extensions: Record<string, any> } {
-  let err: GraphQLError = error;
+  let err = error as Error & { extensions: Record<string, any> };
   if (err.extensions) {
     err.extensions.code = code;
   } else {
     err.extensions = { code };
   }
-  return err as Error & { extensions: Record<string, any> };
+  return err;
 }
 
 export interface ErrorOptions {
@@ -78,7 +78,7 @@ export interface ErrorOptions {
 }
 
 export function fromGraphQLError(error: GraphQLError, options?: ErrorOptions) {
-  const copy: GraphQLError =
+  const copy: any =
     options && options.errorClass
       ? new options.errorClass(error.message)
       : new ApolloError(error.message);
@@ -88,7 +88,7 @@ export function fromGraphQLError(error: GraphQLError, options?: ErrorOptions) {
     copy[key] = error[key];
   });
 
-  //extensions are non enumerable, so copy them directly
+  // Extensions are non enumerable, so copy them directly.
   copy.extensions = {
     ...copy.extensions,
     ...error.extensions,
@@ -148,10 +148,13 @@ export function formatApolloErrors(
     logFunction?: LogFunction;
     debug?: boolean;
   },
-): Array<Error> {
+): Array<GraphQLError> {
   const { formatter, debug, logFunction } = options;
 
-  const enrichedErrors = errors.map(error => enrichError(error, debug));
+  // XXX not sure why it's valid to cast error to GraphQLError here
+  const enrichedErrors = errors.map(error =>
+    enrichError(error as GraphQLError, debug),
+  );
 
   if (!formatter) {
     return enrichedErrors;
@@ -178,5 +181,5 @@ export function formatApolloErrors(
         return enrichError(newError, debug);
       }
     }
-  }) as Array<Error>;
+  }) as Array<GraphQLError>;
 }

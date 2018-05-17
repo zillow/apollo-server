@@ -12,6 +12,7 @@
       "tag: internal": ":house: Internal"
     }
   },
+  "hoist": true,
   "packages": [
     "packages/*"
   ]
