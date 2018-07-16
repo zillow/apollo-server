@@ -37,11 +37,7 @@ export class HTTPCache {
 
     if (policy.satisfiesWithoutRevalidation(policyRequestFrom(request))) {
       const headers = policy.responseHeaders();
-      return new Response(body, {
-        url: policy._url,
-        status: policy._status,
-        headers,
-      });
+      return new Response(body, { status: policy._status, headers });
     } else {
       const revalidationHeaders = policy.revalidationHeaders(
         policyRequestFrom(request),
@@ -61,7 +57,6 @@ export class HTTPCache {
         modified
           ? revalidationResponse
           : new Response(body, {
-              url: revalidatedPolicy._url,
               status: revalidatedPolicy._status,
               headers: revalidatedPolicy.responseHeaders(),
             }),
@@ -96,7 +91,6 @@ export class HTTPCache {
     // To avoid https://github.com/bitinn/node-fetch/issues/151, we don't use
     // response.clone() but create a new response from the consumed body
     return new Response(body, {
-      url: response.url,
       status: response.status,
       statusText: response.statusText,
       headers: policy.responseHeaders(),
