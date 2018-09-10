@@ -161,6 +161,7 @@ function doRunQuery(
     variables: options.variables,
     persistedQueryHit: options.persistedQueryHit,
     persistedQueryRegister: options.persistedQueryRegister,
+    context,
   });
   return Promise.resolve()
     .then(
@@ -332,7 +333,8 @@ function doRunQuery(
       // the patches have been resolved.
       if (isDeferredGraphQLResponse(graphqlResponse)) {
         const response = extensionStack.willSendResponse({
-          graphqlResponse: graphqlResponse.initialResponse,
+          graphqlResponse: graphqlResponse.initialResponse as GraphQLResponse,
+          context,
         });
         return {
           ...graphqlResponse,
@@ -341,6 +343,7 @@ function doRunQuery(
       } else {
         const response = extensionStack.willSendResponse({
           graphqlResponse: graphqlResponse as GraphQLResponse,
+          context,
         });
         requestDidEnd();
         return response.graphqlResponse;

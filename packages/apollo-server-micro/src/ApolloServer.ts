@@ -1,8 +1,8 @@
 import { ApolloServerBase, GraphQLOptions } from 'apollo-server-core';
-import { processRequest as processFileUploads } from 'apollo-upload-server';
+import { processRequest as processFileUploads } from '@apollographql/apollo-upload-server';
 import { ServerResponse } from 'http';
 import { send } from 'micro';
-import { renderPlaygroundPage } from 'graphql-playground-html';
+import { renderPlaygroundPage } from '@apollographql/graphql-playground-html';
 import { parseAll } from 'accept';
 
 import { graphqlMicro } from './microApollo';

@@ -9,7 +9,7 @@ export {
 // This specifies the version of GraphQL Playground that will be served
 // from graphql-playground-html, and is passed to renderPlaygroundPage
 // by the integration subclasses
-const playgroundVersion = '1.7.2';
+const playgroundVersion = '1.7.4';
 
 // https://stackoverflow.com/a/51365037
 type RecursivePartial<T> = {
@@ -39,7 +39,8 @@ export function createPlaygroundOptions(
   playground: PlaygroundConfig = {},
 ): PlaygroundRenderPageOptions | undefined {
   const isDev = process.env.NODE_ENV !== 'production';
-  const enabled: boolean = typeof playground === 'boolean' ? playground : isDev;
+  const enabled: boolean =
+    typeof playground !== 'undefined' ? !!playground : isDev;
 
   if (!enabled) {
     return undefined;
@@ -48,14 +49,20 @@ export function createPlaygroundOptions(
   const playgroundOverrides =
     typeof playground === 'boolean' ? {} : playground || {};
 
+  const settingsOverrides = playgroundOverrides.hasOwnProperty('settings')
+    ? {
+        settings: {
+          ...defaultPlaygroundOptions.settings,
+          ...playgroundOverrides.settings,
+        },
+      }
+    : { settings: undefined };
+
   const playgroundOptions: PlaygroundRenderPageOptions = {
     ...defaultPlaygroundOptions,
     ...playgroundOverrides,
-    settings: {
-      ...defaultPlaygroundOptions.settings,
-      ...playgroundOverrides.settings,
-    },
-  } as PlaygroundRenderPageOptions; // TODO: Remove casting when strict mode = true in apollo-server-core tsconfig
+    ...settingsOverrides,
+  };
 
   return playgroundOptions;
 }

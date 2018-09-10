@@ -15,8 +15,6 @@ import { GraphQLExtension } from 'graphql-extensions';
 import { EngineReportingAgent } from 'apollo-engine-reporting';
 import { InMemoryLRUCache } from 'apollo-server-caching';
 
-import { GraphQLUpload } from 'apollo-upload-server';
-
 import {
   SubscriptionServer,
   ExecutionParams,
@@ -64,10 +62,11 @@ export class ApolloServerBase {
   public graphqlPath: string = '/graphql';
   public requestOptions: Partial<GraphQLOptions<any>>;
 
-  private schema: GraphQLSchema;
   private context?: Context | ContextFunction;
   private engineReportingAgent?: EngineReportingAgent;
   private extensions: Array<() => GraphQLExtension>;
+
+  protected schema: GraphQLSchema;
   protected subscriptionServerOptions?: SubscriptionServerOptions;
   protected uploadsConfig?: FileUploadOptions;
 
@@ -88,6 +87,7 @@ export class ApolloServerBase {
       typeDefs,
       introspection,
       mocks,
+      mockEntireSchema,
       extensions,
       engine,
       subscriptions,
@@ -150,13 +150,6 @@ export class ApolloServerBase {
       }
     }
 
-    //Add upload resolver
-    if (this.uploadsConfig) {
-      if (resolvers && !resolvers.Upload) {
-        resolvers.Upload = GraphQLUpload;
-      }
-    }
-
     if (schema) {
       // @defer directive should be added by default
       const newDirectives = schema.getDirectives().slice();
@@ -177,28 +170,64 @@ export class ApolloServerBase {
         );
       }
 
-      const deferDirectiveDef = gql`
-        directive @defer(if: Boolean = true) on FIELD
-      `;
-      const uploadScalarDef = gql`
-        scalar Upload
-      `;
+      let augmentedTypeDefs = Array.isArray(typeDefs) ? typeDefs : [typeDefs];
+
+      // Add support for @defer directive.
+      augmentedTypeDefs.push(
+        gql`
+          directive @defer(if: Boolean = true) on FIELD
+        `,
+      );
+
+      // We augment the typeDefs with the @cacheControl directive and associated
+      // scope enum, so makeExecutableSchema won't fail SDL validation
+      augmentedTypeDefs.push(
+        gql`
+          enum CacheControlScope {
+            PUBLIC
+            PRIVATE
+          }
+
+          directive @cacheControl(
+            maxAge: Int
+            scope: CacheControlScope
+          ) on FIELD_DEFINITION | OBJECT | INTERFACE
+        `,
+      );
+
+      if (this.uploadsConfig) {
+        const {
+          GraphQLUpload,
+        } = require('@apollographql/apollo-upload-server');
+        if (resolvers && !resolvers.Upload) {
+          resolvers.Upload = GraphQLUpload;
+        }
+
+        // We augment the typeDefs with the Upload scalar, so typeDefs that
+        // don't include it won't fail
+        augmentedTypeDefs.push(
+          gql`
+            scalar Upload
+          `,
+        );
+      }
+
       this.schema = makeExecutableSchema({
-        // Add in the upload scalar, and @defer directive so that schemas
-        // that don't include it won't error when we makeExecutableSchema
-        typeDefs: this.uploadsConfig
-          ? [uploadScalarDef, deferDirectiveDef].concat(typeDefs)
-          : [deferDirectiveDef].concat(typeDefs),
+        typeDefs: augmentedTypeDefs,
         schemaDirectives,
         resolvers,
       });
     }
 
-    if (mocks) {
+    if (mocks || typeof mockEntireSchema !== 'undefined') {
       addMockFunctionsToSchema({
         schema: this.schema,
-        preserveResolvers: true,
-        mocks: typeof mocks === 'boolean' ? {} : mocks,
+        mocks:
+          typeof mocks === 'boolean' || typeof mocks === 'undefined'
+            ? {}
+            : mocks,
+        preserveResolvers:
+          typeof mockEntireSchema === 'undefined' ? false : !mockEntireSchema,
       });
     }
 
@@ -302,7 +331,10 @@ export class ApolloServerBase {
           ? onConnect
           : (connectionParams: Object) => ({ ...connectionParams }),
         onDisconnect: onDisconnect,
-        onOperation: async (_: string, connection: ExecutionParams) => {
+        onOperation: async (
+          message: { payload: any },
+          connection: ExecutionParams,
+        ) => {
           connection.formatResponse = (value: ExecutionResult) => ({
             ...value,
             errors:
@@ -317,7 +349,7 @@ export class ApolloServerBase {
           try {
             context =
               typeof this.context === 'function'
-                ? await this.context({ connection })
+                ? await this.context({ connection, payload: message.payload })
                 : context;
           } catch (e) {
             throw formatApolloErrors([e], {

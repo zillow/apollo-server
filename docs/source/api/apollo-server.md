@@ -57,13 +57,17 @@ new ApolloServer({
 
   A boolean enabling the default mocks or object that contains definitions
 
+* `mockEntireSchema`: <`Boolean`>
+
+  A boolean controlling whether existing resolvers are overridden by mocks. Defaults to true, meaning that all resolvers receive mocked values.
+
 * `schemaDirectives`: <`Object`>
 
   Contains definition of schema directives used in the `typeDefs`
 
 * `introspection`: <`Boolean`>
 
-  Enables and disables schema introspection
+  Enables and disables schema introspection. Disabled in production by default.
 
 * `playground`: <`Boolean`> | <`Object`>
 
@@ -340,3 +344,7 @@ addMockFunctionsToSchema({
    itself. Set this to false to disable. You can manually invoke 'stop()' and
    'sendReport()' on other signals if you'd like. Note that 'sendReport()'
    does not run synchronously so it cannot work usefully in an 'exit' handler.
+
+*  `maskErrorDetails`: boolean
+
+   Set to true to remove error details from the traces sent to Apollo's servers. Defaults to false.
